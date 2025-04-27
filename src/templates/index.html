@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Metacritic Games</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 1rem; }
+        h1, form { text-align: center; }
+        ul { list-style: none; padding-left: 0; }
+        li { margin: 1rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
+        a { text-decoration: none; color: #0077cc; }
+        .score { font-weight: bold; color: #2a9d8f; margin-left: 0.5rem; }
+    </style>
+</head>
+<body>
+    <h1>Metacritic Games</h1>
+    
+    <form method="GET" action="/games">
+        <label for="count">How many games?</label>
+        <input type="number" name="count" id="count" min="1" value="10" required>
+        <button type="submit">Fetch</button>
+    </form>
+
+    {% if games %}
+        <ul>
+            {% for game in games %}
+                <li>
+                    <a href="{{ game.link }}" target="_blank">{{ game.title }}</a>
+                    <span class="score">{{ game.score }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% elif error %}
+        <p style="color: red;">Error: {{ error }}</p>
+    {% endif %}
+</body>
+</html>
