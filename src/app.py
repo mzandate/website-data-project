@@ -10,6 +10,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+
 
 # Flask app setup
 app = Flask(__name__)
@@ -50,12 +52,12 @@ def scrape_metacritic(count=None):
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
 
-    # Use Heroku environment variables if available
     chrome_bin = os.environ.get("GOOGLE_CHROME_BIN", "/usr/bin/google-chrome")
     chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
     options.binary_location = chrome_bin
 
-    driver = webdriver.Chrome(executable_path=chromedriver_path, options=options)
+    chrome_service = Service(executable_path=chromedriver_path)
+    driver = webdriver.Chrome(service=chrome_service, options=options)
 
     games = []
     page_num = 0
@@ -171,13 +173,13 @@ def scrape_all_games():
         return jsonify({'message': f'Successfully added {len(games)} games to the database.'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
+## route to show games in database 
 @app.route('/games_db')
 def list_games_db():
     games = Game.query.all()
     result = [{'title': g.title, 'score': g.score, 'link': g.link} for g in games]
     return jsonify(result)
-
+## api route for testing 
 @app.route('/api/games')
 def get_games_api():
     count = request.args.get('count', default=10, type=int)
