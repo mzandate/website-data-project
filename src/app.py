@@ -145,6 +145,14 @@ def health():
             "error": str(e)
         }), 500
 
+@app.route('/echo')
+def echo():
+    message = request.args.get('message')
+    if not message:
+        return jsonify({'error': 'No message provided'}), 400
+    return jsonify({'echo': message}), 200
+
+
 @app.route('/games')
 def show_games():
     count = request.args.get('count', default=10, type=int)

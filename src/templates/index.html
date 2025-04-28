@@ -22,7 +22,7 @@
       flex-wrap: wrap;
     }
 
-    input[type="number"], button {
+    input[type="number"], input[type="text"], button {
       padding: 10px;
       font-size: 16px;
     }
@@ -100,6 +100,8 @@
     <button id="average-btn">Show Average Score</button>
     <button id="health-btn">Health</button>
     <button id="scrape-btn">Scrape Games</button>
+    <input type="text" id="echo-input" placeholder="Type a message" />
+    <button id="echo-btn">Echo Message</button>
   </div>
 
   <div id="status-message"></div>
@@ -175,6 +177,23 @@
         })
         .catch(() => {
           statusEl.textContent = 'Failed to scrape games.';
+        });
+    });
+
+    document.getElementById('echo-btn').addEventListener('click', () => {
+      const message = document.getElementById('echo-input').value.trim();
+      if (!message) {
+        statusEl.textContent = 'Please enter a message to echo.';
+        return;
+      }
+      statusEl.textContent = 'Sending your message...';
+      fetch(`/echo?message=${encodeURIComponent(message)}`)
+        .then(res => res.json())
+        .then(data => {
+          statusEl.textContent = `Echo: ${data.echo}`;
+        })
+        .catch(() => {
+          statusEl.textContent = 'Failed to echo message.';
         });
     });
 
