@@ -1,2 +1,3 @@
-﻿web: gunicorn src.app:app
+﻿release: playwright install
+web: gunicorn src.app:app
 
