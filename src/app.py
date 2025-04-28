@@ -1,17 +1,17 @@
+import os
+import time
 from flask import Flask, jsonify, render_template, request, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_apscheduler import APScheduler
 from prometheus_client import Counter, Histogram, generate_latest
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
-import time
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-# App setup
-
-import subprocess
-
-subprocess.run(["playwright", "install"], check=True)
-
+# Flask app setup
 app = Flask(__name__)
 
 # Database config
@@ -42,21 +42,38 @@ class Game(db.Model):
     def __repr__(self):
         return f'<Game {self.title}>'
 
-# Scraper function
+# Scraper function using Selenium
 def scrape_metacritic(count=None):
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+    options = Options()
+    options.headless = True
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
 
-        games = []
-        page_num = 1
+    # Use Heroku environment variables if available
+    chrome_bin = os.environ.get("GOOGLE_CHROME_BIN", "/usr/bin/google-chrome")
+    chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
+    options.binary_location = chrome_bin
 
+    driver = webdriver.Chrome(executable_path=chromedriver_path, options=options)
+
+    games = []
+    page_num = 0
+
+    try:
         while True:
             url = f"https://www.metacritic.com/browse/game/?releaseYearMin=1958&releaseYearMax=2025&page={page_num}"
-            page.goto(url, timeout=60000)
-            page.wait_for_selector('.c-finderProductCard')
+            driver.get(url)
 
-            soup = BeautifulSoup(page.content(), 'html.parser')
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".c-finderProductCard"))
+                )
+            except Exception:
+                # No more cards found or timeout - stop scraping
+                break
+
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
             cards = soup.select('.c-finderProductCard')
 
             if not cards:
@@ -84,9 +101,10 @@ def scrape_metacritic(count=None):
                 break
 
             page_num += 1
+    finally:
+        driver.quit()
 
-        browser.close()
-        return games
+    return games
 
 # Scheduled job (runs once a week)
 def job_store_all_games():
@@ -105,7 +123,7 @@ scheduler.add_job(
     days=7
 )
 
-# Request hooks
+# Request hooks for metrics
 @app.before_request
 def before_request():
     request.start_time = time.time()
@@ -137,12 +155,10 @@ def show_games():
     games = Game.query.limit(count).all()
     return render_template('index.html', games=games)
 
-
-##scapres all games from metacritic and store them in the database
 @app.route('/all')
 def scrape_all_games():
     try:
-        games = scrape_metacritic(count=1000)
+        games = scrape_metacritic(count=40)
 
         Game.query.delete()
         db.session.commit()
