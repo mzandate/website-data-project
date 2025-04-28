@@ -129,7 +129,21 @@ def metrics():
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "ok"}), 200
+    try:
+        # Try to query the count of games to check DB connectivity
+        game_count = Game.query.count()
+        return jsonify({
+            "status": "ok",
+            "database": "up",
+            "game_count": game_count
+        }), 200
+    except Exception as e:
+        # If an error happens (DB down etc), report failure and error message
+        return jsonify({
+            "status": "error",
+            "database": "down",
+            "error": str(e)
+        }), 500
 
 @app.route('/games')
 def show_games():
@@ -137,10 +151,11 @@ def show_games():
     games = Game.query.limit(count).all()
     return render_template('index.html', games=games)
 
+# route that scapes the games but you have to adjust the count 
 @app.route('/all')
 def scrape_all_games():
     try:
-        games = scrape_metacritic(count=30)
+        games = scrape_metacritic(count=1000)
 
         Game.query.delete()
         db.session.commit()
@@ -153,6 +168,32 @@ def scrape_all_games():
         return jsonify({'message': f'Successfully added {len(games)} games to the database.'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+# takes all the game and calculates the average score
+@app.route('/average_score')
+def average_score():
+    games = Game.query.all()
+    scores = []
+    for g in games:
+        try:
+            # Try converting to int
+            score = int(g.score)
+            scores.append(score)
+        except (ValueError, TypeError):
+            # Skip if not a valid number
+            continue
+
+    if scores:
+        avg_score = sum(scores) / len(scores)
+        return jsonify({
+            'average_score': round(avg_score, 2),
+            'game_count': len(scores)
+        })
+    else:
+        return jsonify({
+            'average_score': None,
+            'game_count': 0,
+            'message': 'No valid scores available'
+        })
 
 @app.route('/games_db')
 def list_games_db():

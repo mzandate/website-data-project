@@ -1,37 +1,201 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Metacritic Games</title>
-    <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 1rem; }
-        h1, form { text-align: center; }
-        ul { list-style: none; padding-left: 0; }
-        li { margin: 1rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
-        a { text-decoration: none; color: #0077cc; }
-        .score { font-weight: bold; color: #2a9d8f; margin-left: 0.5rem; }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Top Metacritic Games</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      padding: 40px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    input[type="number"], button {
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      min-width: 120px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .games {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+    }
+
+    .card p {
+      margin: 5px 0;
+    }
+
+    .card a {
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    .card a:hover {
+      text-decoration: underline;
+    }
+
+    #buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    #status-message {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 30px;
+      min-height: 24px;
+    }
+  </style>
 </head>
 <body>
-    <h1>Metacritic Games</h1>
-    
-    <form method="GET" action="/games">
-        <label for="count">How many games?</label>
-        <input type="number" name="count" id="count" min="1" value="10" required>
-        <button type="submit">Fetch</button>
-    </form>
 
-    {% if games %}
-        <ul>
-            {% for game in games %}
-                <li>
-                    <a href="{{ game.link }}" target="_blank">{{ game.title }}</a>
-                    <span class="score">{{ game.score }}</span>
-                </li>
-            {% endfor %}
-        </ul>
-    {% elif error %}
-        <p style="color: red;">Error: {{ error }}</p>
-    {% endif %}
+  <h1>Top Metacritic Games</h1>
+
+  <form method="get" action="/">
+    <input type="number" name="count" placeholder="How many games from db?" min="1" required />
+    <button type="submit">Fetch Games</button>
+  </form>
+
+  <div id="buttons">
+    <button id="games-db-btn">Show Games from DB</button>
+    <button id="average-btn">Show Average Score</button>
+    <button id="health-btn">Health</button>
+    <button id="scrape-btn">Scrape Games</button>
+  </div>
+
+  <div id="status-message"></div>
+
+  {% if games %}
+  <div class="games" id="games-container">
+    {% for game in games %}
+    <div class="card">
+      <h3>{{ game.title }}</h3>
+      <p><strong>Score:</strong> {{ game.score }}</p>
+      <p><a href="{{ game.link }}" target="_blank">View on Metacritic</a></p>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="games" id="games-container"></div>
+  {% endif %}
+
+  <script>
+    const statusEl = document.getElementById('status-message');
+    const gamesContainer = document.getElementById('games-container');
+
+    document.getElementById('games-db-btn').addEventListener('click', () => {
+      statusEl.textContent = 'Loading games from DB...';
+      fetch('/games_db')
+        .then(res => res.json())
+        .then(games => {
+          statusEl.textContent = `Loaded ${games.length} games from DB.`;
+          renderGames(games);
+        })
+        .catch(() => {
+          statusEl.textContent = 'Failed to load games from DB.';
+        });
+    });
+
+    document.getElementById('average-btn').addEventListener('click', () => {
+      statusEl.textContent = 'Calculating average score...';
+      fetch('/average_score')
+        .then(res => res.json())
+        .then(data => {
+          statusEl.textContent = `Average Score: ${data.average_score}`;
+        })
+        .catch(() => {
+          statusEl.textContent = 'Failed to fetch average score.';
+        });
+    });
+
+    document.getElementById('health-btn').addEventListener('click', () => {
+      statusEl.textContent = 'Checking health...';
+      fetch('/health')
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'ok') {
+            statusEl.textContent = `Health: ${data.status} | Database: ${data.database} | Game Count: ${data.game_count}`;
+            statusEl.style.color = 'green';
+          } else {
+            statusEl.textContent = `Health: ${data.status} | Database: ${data.database} | Error: ${data.error}`;
+            statusEl.style.color = 'red';
+          }
+        })
+        .catch(() => {
+          statusEl.textContent = 'Error fetching health status.';
+          statusEl.style.color = 'red';
+        });
+    });
+
+    document.getElementById('scrape-btn').addEventListener('click', () => {
+      statusEl.textContent = 'Starting scrape... This may take a while.';
+      fetch('/all')
+        .then(res => res.json())
+        .then(data => {
+          statusEl.textContent = data.message || 'Scrape complete.';
+        })
+        .catch(() => {
+          statusEl.textContent = 'Failed to scrape games.';
+        });
+    });
+
+    function renderGames(games) {
+      gamesContainer.innerHTML = '';
+      if (!games.length) {
+        gamesContainer.textContent = 'No games found.';
+        return;
+      }
+      games.forEach(game => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${game.title}</h3>
+          <p><strong>Score:</strong> ${game.score}</p>
+          <p><a href="${game.link}" target="_blank">View on Metacritic</a></p>
+        `;
+        gamesContainer.appendChild(card);
+      });
+    }
+  </script>
+
 </body>
 </html>
