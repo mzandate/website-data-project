@@ -7,6 +7,11 @@ from playwright.sync_api import sync_playwright
 import time
 
 # App setup
+
+import subprocess
+
+subprocess.run(["playwright", "install"], check=True)
+
 app = Flask(__name__)
 
 # Database config
