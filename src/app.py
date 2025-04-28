@@ -91,7 +91,7 @@ def scrape_metacritic(count=None):
 # Scheduled job (runs once a week)
 def job_store_all_games():
     print("Running weekly scraper job...")
-    games = scrape_metacritic(count=9999)
+    games = scrape_metacritic(count=100)
     Game.query.delete()
     for g in games:
         db.session.add(Game(title=g['title'], score=g['score'], link=g['link']))
