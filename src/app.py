@@ -5,6 +5,8 @@ from prometheus_client import Counter, Histogram, generate_latest
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 import time
+import subprocess
+subprocess.run(["playwright", "install", "chromium"], check=True)
 
 # App setup
 app = Flask(__name__)
