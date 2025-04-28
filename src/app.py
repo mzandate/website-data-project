@@ -155,7 +155,7 @@ def show_games():
 @app.route('/all')
 def scrape_all_games():
     try:
-        games = scrape_metacritic(count=500)
+        games = scrape_metacritic(count=100)
 
         Game.query.delete()
         db.session.commit()
